@@ -1,11 +1,14 @@
-__author__ = "Dhruv Govil"
-__copyright__ = "Copyright 2016, Dhruv Govil"
-__credits__ = ["Dhruv Govil", "John Hood", "Jason Viloria", "Adric Worley", "Alex Widener"]
-__license__ = "MIT"
-__version__ = "1.1.4"
-__maintainer__ = "Dhruv Govil"
-__email__ = "dhruvagovil@gmail.com"
-__status__ = "Beta"
+"""PySignal library."""
+
+__author__ = 'Dhruv Govil'
+__copyright__ = 'Copyright 2016, Dhruv Govil'
+__credits__ = ['Dhruv Govil', 'John Hood',
+               'Jason Viloria', 'Adric Worley', 'Alex Widener']
+__license__ = 'MIT'
+__version__ = '1.1.4'
+__maintainer__ = 'Dhruv Govil'
+__email__ = 'dhruvagovil@gmail.com'
+__status__ = 'Beta'
 
 import inspect
 import sys
@@ -21,9 +24,10 @@ except ImportError:
     import types
 
     class WeakMethod(object):
-        """Light WeakMethod backport compiled from various sources. Tested in 2.7"""
+        """Light WeakMethod backport compiled from various sources. Tested in 2.7."""
 
         def __init__(self, func):
+            """Constructor."""
             if inspect.ismethod(func):
                 self._obj = weakref.ref(func.__self__)
                 self._func = weakref.ref(func.__func__)
@@ -37,7 +41,9 @@ except ImportError:
                 # Rather than attempting to handle this, raise the same exception
                 # you get from WeakMethod.
                 except AttributeError:
-                    raise TypeError("argument should be a bound method, not %s" % type(func))
+                    raise TypeError(
+                        'argument should be a bound method, not %s' % type(func)
+                    )
 
         def __call__(self):
             if self._obj is not None:
@@ -66,23 +72,32 @@ except ImportError:
             return not self.__eq__(other)
 
 
+def slot(func):
+    """Represent a slot.
+
+    Does nothing, just for better code readability during use.
+    """
+    def wrapper(*args, **kwargs):
+        func(*args, **kwargs)
+    return wrapper
+
+
 class Signal(object):
-    """
-    The Signal is the core object that handles connection and emission .
-    """
+    """The Signal is the core object that handles connection and emission."""
 
     def __init__(self):
         super(Signal, self).__init__()
         self._block = False
         self._sender = None
         self._slots = []
-        
+
     def __call__(self, *args, **kwargs):
         self.emit(*args, **kwargs)
 
     def emit(self, *args, **kwargs):
-        """
-        Calls all the connected slots with the provided args and kwargs unless block is activated
+        """Call all the connected slots with the provided args and kwargs.
+
+        No action if block is activated.
         """
         if self._block:
             return
@@ -118,25 +133,27 @@ class Signal(object):
             elif isinstance(slot, partial):
                 slot(*args, **kwargs)
             elif isinstance(slot, weakref.WeakKeyDictionary):
-                # For class methods, get the class object and call the method accordingly.
+                # For class methods, get the class object and call the method
+                # accordingly.
                 for obj, method in slot.items():
                     method(obj, *args, **kwargs)
             elif isinstance(slot, weakref.ref):
-                # If it's a weakref, call the ref to get the instance and then call the func
-                # Don't wrap in try/except so we don't risk masking exceptions from the actual func call
+                # If it's a weakref, call the ref to get the instance
+                # and then call the function. Don't wrap in try/except
+                # so we don't risk masking exceptions from the actual func call
                 tested_slot = slot()
                 if tested_slot is not None:
                     tested_slot(*args, **kwargs)
             else:
-                # Else call it in a standard way. Should be just lambdas at this point
+                # Else call it in a standard way. Should be just lambdas at
+                # this point
                 slot(*args, **kwargs)
 
     def connect(self, slot):
-        """
-        Connects the signal to any callable object
-        """
+        """Connect the signal to any callable object."""
         if not callable(slot):
-            raise ValueError("Connection to non-callable '%s' object failed" % slot.__class__.__name__)
+            raise ValueError(
+                'Connection to non-callable "%s" object failed' % slot.__class__.__name__)
 
         if isinstance(slot, (partial, Signal)) or '<' in slot.__name__:
             # If it's a partial, a Signal or a lambda. The '<' check is the only py2 and py3 compatible way I could find
@@ -217,7 +234,7 @@ class ClassSignal(object):
         return tmp.setdefault(instance, Signal())
 
     def __set__(self, instance, value):
-        raise RuntimeError("Cannot assign to a Signal object")
+        raise RuntimeError('Cannot assign to a Signal object')
 
 
 class SignalFactory(dict):
@@ -249,7 +266,7 @@ class SignalFactory(dict):
         Emits a signal by name if it exists. Any additional args or kwargs are passed to the signal
         :param signalName: the signal name to emit
         """
-        assert signalName in self, "%s is not a registered signal" % signalName
+        assert signalName in self, '%s is not a registered signal' % signalName
         self[signalName].emit(*args, **kwargs)
 
     def connect(self, signalName, slot):
@@ -258,7 +275,7 @@ class SignalFactory(dict):
         :param signalName: the signal name to connect to
         :param slot: the callable slot to register
         """
-        assert signalName in self, "%s is not a registered signal" % signalName
+        assert signalName in self, '%s is not a registered signal' % signalName
         self[signalName].connect(slot)
 
     def block(self, signals=None, isBlocked=True):
@@ -280,7 +297,7 @@ class SignalFactory(dict):
 
         for signal in signals:
             if signal not in self:
-                raise RuntimeError("Could not find signal matching %s" % signal)
+                raise RuntimeError('Could not find signal matching %s' % signal)
             self[signal].block(isBlocked)
 
 
@@ -301,7 +318,7 @@ class ClassSignalFactory(object):
         return signal
 
     def __set__(self, instance, value):
-        raise RuntimeError("Cannot assign to a Signal object")
+        raise RuntimeError('Cannot assign to a Signal object')
 
     def register(self, name):
         """

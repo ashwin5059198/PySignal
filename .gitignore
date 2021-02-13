@@ -3,3 +3,8 @@
 dist
 PySignal.egg-info
 *.pyc
+
+main.py
+
+venv
+.vscode
